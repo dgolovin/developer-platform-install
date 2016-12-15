@@ -71,7 +71,7 @@ class CygwinInstall extends InstallableItem {
       '--packages',
       'openssh,rsync'
     ];
-    let originalExecFile = path.join(this.installerDataSvc.cygwinDir(),'setup-x86_64.exe');
+    let originalExecFile = path.join(this.installerDataSvc.cygwinDir(), 'setup-x86_64.exe');
     installer.execFile(
       this.downloadedFile, opts
     ).then(() => {
