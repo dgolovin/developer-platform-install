@@ -1,14 +1,11 @@
 'use strict';
 
+import PowerShell from 'powershell';
+
 class Platform {
 
-  static addToPath(location){
-    return [
-      '$newPath = "' + location + '";',
-      '$oldPath = [Environment]::GetEnvironmentVariable("path", "User");',
-      '[Environment]::SetEnvironmentVariable("Path", "$newPath;$oldPath", "User");',
-      '[Environment]::Exit(0)'
-    ].join('\r\n');
+  static addToPath(location) {
+    return PowerShell.addToPath(location);
   }
 
   static identify(map) {
