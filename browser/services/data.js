@@ -1,32 +1,44 @@
 'use strict';
 
+import os from 'os';
+import fs from 'fs';
+import path from 'path';
+import pify from 'pify';
+import keytar from 'keytar';
+import mkdirp from 'mkdirp';
 import Logger from './logger';
+import fsExtra from 'fs-extra';
+import electron from 'electron';
+import child_process from'child_process';
 import Platform from '../services/platform';
+import TokenStore from './credentialManager';
 import loadMetadata from '../services/metadata';
-let os = require('os');
-let path = require('path');
-let fs = require('fs');
-let fsExtra = require('fs-extra');
-let electron = require('electron');
-let mkdirp = require('mkdirp');
-let pify = require('pify');
-let child_process = require('child_process');
+
 
 class InstallerDataService {
   constructor($state, requirements = require('../../requirements.json'), packageConf = require('../../package.json')) {
     this.tmpDir = os.tmpdir();
 
     if (Platform.getOS() === 'win32') {
-      this.installRoot = 'c:\\DevelopmentSuite';
+      this.defaultFolder = 'c:\\DevelopmentSuite';
     } else {
-      this.installRoot = '/Applications/DevelopmentSuite';
+      this.defaultFolder = '/Applications/DevelopmentSuite';
     }
+    this.installRoot = this.defaultFolder;
     this.ipcRenderer = electron.ipcRenderer;
     this.router = $state;
     this.packageConf = packageConf;
 
-    this.username = '';
+    this.username = TokenStore.getUserName();
     this.password = '';
+    if (this.username) {
+      let password = TokenStore.getItem('login', this.username);
+      password.then((pass) => {
+        if(pass && pass !=='') {
+          this.password = pass;
+        }
+      });
+    }
 
     this.installableItems = new Map();
     this.toDownload = new Set();
@@ -61,7 +73,9 @@ class InstallerDataService {
     this.cdkBoxRoot = this.cdkRoot;
     this.ocBinRoot = path.join(this.cdkRoot, 'bin');
     this.cdkMarkerFile = path.join(this.cdkRoot, '.cdk');
+  }
 
+  setupTargetFolder() {
     if (!fs.existsSync(this.installRoot)) {
       mkdirp.sync(path.resolve(this.installRoot));
     }
@@ -187,6 +201,10 @@ class InstallerDataService {
 
   tempDir() {
     return this.tmpDir;
+  }
+
+  localAppData() {
+    return Platform.localAppData();
   }
 
   isDownloading() {

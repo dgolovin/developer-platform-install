@@ -1,34 +1,11 @@
 'use strict';
 
+import openAboutWindow from './index';
+
 let template = [
   {
-    label: 'name',
+    label: 'File',
     submenu: [
-      {
-        role: 'about'
-      },
-      {
-        type: 'separator'
-      },
-      {
-        role: 'services',
-        submenu: []
-      },
-      {
-        type: 'separator'
-      },
-      {
-        role: 'hide'
-      },
-      {
-        role: 'hideothers'
-      },
-      {
-        role: 'unhide'
-      },
-      {
-        type: 'separator'
-      },
       {
         role: 'quit'
       }
@@ -63,20 +40,6 @@ let template = [
       },
       {
         role: 'selectall'
-      },
-      {
-        type: 'separator'
-      },
-      {
-        label: 'Speech',
-        submenu: [
-          {
-            role: 'startspeaking'
-          },
-          {
-            role: 'stopspeaking'
-          }
-        ]
       }
     ]
   },
@@ -116,34 +79,35 @@ let template = [
     role: 'window',
     submenu: [
       {
-        label: 'Close',
-        accelerator: 'CmdOrCtrl+W',
-        role: 'close'
-      },
-      {
         label: 'Minimize',
         accelerator: 'CmdOrCtrl+M',
         role: 'minimize'
       },
       {
-        label: 'Zoom',
-        role: 'zoom'
+        label: 'Close',
+        accelerator: 'CmdOrCtrl+W',
+        role: 'close'
+      }
+    ]
+  },
+  {
+    label: 'Help',
+    submenu: [
+      {
+        label: 'Documentation',
+        accelerator: 'f1',
+        click: () => {
+          require('electron').shell.openExternal('https://access.redhat.com/documentation/en/red-hat-development-suite/');
+        }
       },
       {
         type: 'separator'
       },
       {
-        label: 'Bring All to Front',
-        role: 'front'
-      }
-    ]
-  },
-  {
-    role: 'help',
-    submenu: [
-      {
-        label: 'Learn More',
-        click () { require('electron').shell.openExternal('http://electron.atom.io'); }
+        label: 'About Red Hat Development Suite',
+        click: () => {
+          openAboutWindow();
+        }
       }
     ]
   }

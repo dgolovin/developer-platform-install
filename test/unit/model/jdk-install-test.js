@@ -31,6 +31,7 @@ describe('JDK installer', function() {
   installerDataSvc.jdkDir.returns('install/jdk8');
   installerDataSvc.getUsername.returns('user');
   installerDataSvc.getPassword.returns('passwd');
+  installerDataSvc.localAppData.restore();
 
   let fakeProgress;
 
@@ -67,7 +68,7 @@ describe('JDK installer', function() {
     sandbox = sinon.sandbox.create();
     installer = new JdkInstall(installerDataSvc, 'jdk8', downloadUrl, 'jdk.msi', 'sha');
     fakeProgress = sandbox.stub(new ProgressState());
-    fakeProgress.$timeout = sinon.stub().yields();
+    fakeProgress.$timeout = sinon.stub();
     fakeProgress.$scope = {$apply: function () {}};
   });
 
@@ -101,7 +102,7 @@ describe('JDK installer', function() {
 
     it('should download jdk installer to temporary folder with confiugured file name', function() {
       expect(new JdkInstall(installerDataSvc, 'jdk8', 'url', 'jdk.msi', 'sha').downloadedFile).to.equal(
-        path.join('tempDirectory', 'jdk.msi'));
+        path.join(installerDataSvc.localAppData(), 'cache', 'jdk.msi'));
     });
   });
 
@@ -161,7 +162,7 @@ describe('JDK installer', function() {
       it('should select openjdk for installation if older than supported java version detected', function() {
         mockDetectedJvm('1.7.0_1');
         return jdk.detectExistingInstall().then(()=>{
-          expect(jdk.selectedOption).to.be.equal('install');
+          expect(jdk.hasOption('install')).to.be.equal(true);
         });
       });
 
@@ -198,7 +199,7 @@ describe('JDK installer', function() {
           Util.executeCommand.rejects();
           return jdk.detectExistingInstall();
         }).then(()=>{
-          expect(jdk.selectedOption).equals('install');
+          expect(jdk.hasOption('install')).equals(true);
           expect(jdk.option['detected']).to.equal(undefined);
         });
       });
@@ -211,6 +212,7 @@ describe('JDK installer', function() {
 
       it('should not select jdk for installation if no java detected', function() {
         mockDetectedJvm('');
+        jdk.selectedOption = 'detected';
         return jdk.detectExistingInstall().then(()=>{
           expect(jdk.selectedOption).to.be.equal('detected');
         });
@@ -323,7 +325,7 @@ describe('JDK installer', function() {
       installer.downloadInstaller(fakeProgress, success, failure);
 
       expect(spy).to.have.been.calledOnce;
-      expect(spy).to.have.been.calledWith(path.join('tempDirectory', 'jdk.msi'));
+      expect(spy).to.have.been.calledWith(path.join(installerDataSvc.localAppData(), 'cache', 'jdk.msi'));
     });
 
     it('should call downloader#download with the specified parameters once', function() {

@@ -1,5 +1,5 @@
 'use strict';
-import { app, ipcMain, BrowserWindow, dialog, Menu } from 'electron';
+import { app, ipcMain, BrowserWindow, dialog, Menu, globalShortcut } from 'electron';
 import * as logger from './logging';
 import template from './menu';
 
@@ -48,7 +48,9 @@ app.on('quit', function(event, exitCode) {
 // This method will be called when Electron has finished
 // initialization and is ready to create browser windows.
 app.on('ready', function() {
-
+  globalShortcut.register('CmdOrCtrl+W',()=>{
+    BrowserWindow.getFocusedWindow().close();
+  });
   // Create the browser window.
   mainWindow = new BrowserWindow({
     width: 1010,
@@ -62,6 +64,9 @@ app.on('ready', function() {
     template[0].label = app.getName();
     const menu = Menu.buildFromTemplate(template);
     Menu.setApplicationMenu(menu);
+  } else {
+    const menu = Menu.buildFromTemplate(template);
+    Menu.setApplicationMenu(menu);
   }
 
   // Some processing is required to make sure local file can be opened in browser
@@ -70,7 +75,13 @@ app.on('ready', function() {
 
   // Load the index.html of the app
   mainWindow.loadURL(`file://${baseLocation}/../browser/index.html`);
-  mainWindow.bundleTempFolder = process.argv.length > 1 ? process.argv[1].replace(/^--/, '') : undefined;
+
+  // only for windows where 7zip pass location where self extracting archive
+  // was unpacked
+  if (process.platform === 'win32') {
+    mainWindow.bundleTempFolder = process.argv.length > 1 ? process.argv[1].replace(/^--/, '') : undefined;
+  }
+
   mainWindow.once('ready-to-show', () => {
     mainWindow.show();
   });
@@ -96,3 +107,27 @@ app.on('ready', function() {
     }
   });
 });
+
+function openAboutWindow() {
+
+  let aboutWindow = new BrowserWindow({
+    parent: mainWindow,
+    modal: true,
+    useContentSize: true,
+    width: 565,
+    height: 355,
+    'autoHideMenuBar': true,
+    resizable: false,
+    show: false
+  });
+  let baseLocation = encodeURI(__dirname.replace(/\\/g, '/')).replace(/#/g, '%23');
+
+  // Load the about.html of the app
+  aboutWindow.loadURL(`file://${baseLocation}/../browser/about.html`);
+  aboutWindow.setMenu(null);
+  aboutWindow.once('ready-to-show', () => {
+    aboutWindow.show();
+  });
+}
+
+export default openAboutWindow;

@@ -37,6 +37,7 @@ describe('Virtualbox installer', function() {
   installerDataSvc.tempDir.returns('tempDirectory');
   installerDataSvc.installDir.returns('installationFolder');
   installerDataSvc.virtualBoxDir.returns('installationFolder/virtualbox');
+  installerDataSvc.localAppData.restore();
 
   let fakeProgress;
 
@@ -90,7 +91,7 @@ describe('Virtualbox installer', function() {
 
   it('should download virtualbox installer to temporary folder with name configured file name', function() {
     expect(new VirtualBoxInstall(installerDataSvc, 'virtualbox', 'url', 'virtualbox.exe', 'sha', 'ver', 'rev').downloadedFile).to.equal(
-      path.join(installerDataSvc.tempDir(), 'virtualbox.exe'));
+      path.join(installerDataSvc.localAppData(), 'cache', 'virtualbox.exe'));
   });
 
   describe('installer download', function() {
@@ -113,7 +114,7 @@ describe('Virtualbox installer', function() {
       installer.downloadInstaller(fakeProgress, success, failure);
 
       expect(spy).to.have.been.calledOnce;
-      expect(spy).to.have.been.calledWith(path.join('tempDirectory', 'virtualbox.exe'));
+      expect(spy).to.have.been.calledWith(path.join(installerDataSvc.localAppData(), 'cache', 'virtualbox.exe'));
     });
 
     it('should call downloader#download with the specified parameters once', function() {
@@ -133,13 +134,14 @@ describe('Virtualbox installer', function() {
   });
 
   describe('installation', function() {
-    let downloadedFile = path.join('tempDirectory', 'virtualbox.exe');
+    let downloadedFile;
     let helper;
 
     describe('on macos', function() {
       beforeEach(function() {
         helper = new Installer('virtualbox', fakeProgress);
         sandbox.stub(Platform, 'getOS').returns('macOS');
+        downloadedFile = path.join(installerDataSvc.localAppData(), 'cache', 'virtualbox.exe');
         installer = new VirtualBoxInstallDarwin(installerDataSvc, 'virtualbox', downloadUrl, 'virtualbox.exe', 'sha', version, revision);
         installer.ipcRenderer = {on: function() {}};
       });
@@ -155,6 +157,7 @@ describe('Virtualbox installer', function() {
       beforeEach(function() {
         helper = new Installer('virtualbox', fakeProgress);
         sandbox.stub(Platform, 'getOS').returns('win32');
+        downloadedFile = path.join(installerDataSvc.localAppData(), 'cache', 'virtualbox.exe');
         installer = new VirtualBoxInstallWindows(installerDataSvc, 'virtualbox', downloadUrl, 'virtualbox.exe', 'sha', version, revision);
         installer.ipcRenderer = {on: function() {}};
       });
@@ -163,31 +166,21 @@ describe('Virtualbox installer', function() {
         sandbox.stub(child_process, 'execFile').yields('done');
 
         let data = [
+          `"${downloadedFile}"`,
           '--extract',
           '-path',
-          installerDataSvc.virtualBoxDir(),
+          `"${installerDataSvc.virtualBoxDir()}"`,
           '--silent'
         ];
 
-        let spy = sandbox.spy(Installer.prototype, 'execFile');
+        let spy = sandbox.spy(Installer.prototype, 'exec');
         let item2 = new InstallableItem('jdk', 'url', 'installFile', 'targetFolderName', installerDataSvc);
         item2.setInstallComplete();
         item2.thenInstall(installer);
         installer.install(fakeProgress, success, failure);
 
         expect(spy).to.have.been.called;
-        expect(spy).calledWith(downloadedFile, data);
-      });
-
-      it('setup should wait for all downloads to complete', function() {
-        let spy = sandbox.spy(installer, 'installMsi');
-
-        installerDataSvc.downloading = true;
-
-        installer.configure(helper);
-
-        expect(fakeProgress.setStatus).calledWith('Waiting for all downloads to finish');
-        expect(spy).not.called;
+        expect(spy).calledWith(data.join(' '));
       });
 
       describe('configure', function() {
@@ -220,24 +213,25 @@ describe('Virtualbox installer', function() {
         });
 
         it('should execute the msi installer', function() {
-          let spy = sandbox.spy(Installer.prototype, 'execFile');
+          let spy = sandbox.spy(Installer.prototype, 'exec');
 
           let msiFile = path.join(installerDataSvc.virtualBoxDir(), 'VirtualBox-' + version + '-r' + revision + '-MultiArch_amd64.msi');
           let opts = [
+            'msiexec',
             '/i',
-            msiFile,
-            'INSTALLDIR=' + installerDataSvc.virtualBoxDir(),
+            `"${msiFile}"`,
+            `INSTALLDIR="${installerDataSvc.virtualBoxDir()}"`,
             'ADDLOCAL=VBoxApplication,VBoxNetwork,VBoxNetworkAdp',
             '/qn',
             '/norestart',
             '/Liwe',
-            path.join(installerDataSvc.installDir(), 'vbox.log')
+            `"${path.join(installerDataSvc.installDir(), 'vbox.log')}"`
           ];
 
           installer.installMsi(helper, resolve, reject);
 
           expect(spy).to.have.been.calledOnce;
-          expect(spy).to.have.been.calledWith('msiexec', opts);
+          expect(spy).to.have.been.calledWith(opts.join(' '));
         });
 
         it('should add virtualbox target install folder to user PATH environment variable', function() {
@@ -401,7 +395,7 @@ describe('Virtualbox installer', function() {
     });
 
     it('should add neither warning nor error for recomended version', function() {
-      installer.option['detected'].version = '5.1.24';
+      installer.option['detected'].version = '5.1.22';
       installer.validateVersion();
 
       expect(option.error).to.equal('');

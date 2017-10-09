@@ -16,10 +16,10 @@ describe('Account controller', function() {
 
   beforeEach(function() {
     timeout = function(cb) { cb(); };
-    scope = { '$apply': function() { } };
+    scope = { '$apply': function() { }, '$watch': function() { } };
     base64 = { encode: function() {}};
     http = sandbox.stub().resolves('success');
-    controller = new AccountController({}, timeout, scope, http, base64, {}, electron);
+    controller = new AccountController({}, timeout, scope, http, base64, {password: '', username: ''}, electron);
   });
 
   afterEach(function() {
@@ -213,7 +213,7 @@ describe('Account controller', function() {
       controller.handleHttpSuccess({ status: 200, data: true });
 
       expect(spy).to.have.been.calledOnce;
-      expect(spy).to.have.been.calledWith('location');
+      expect(spy).to.have.been.calledWith('install');
       expect(controller.tandcNotSigned).to.be.false;
       expect(controller.authFailed).to.be.false;
     });

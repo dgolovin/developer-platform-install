@@ -37,6 +37,7 @@ describe('Cygwin installer', function() {
   installerDataSvc.installDir.returns('installationFolder');
   installerDataSvc.cygwinDir.returns('install/Cygwin');
   installerDataSvc.getInstallable.returns(fakeInstallable);
+  installerDataSvc.localAppData.restore();
 
   let fakeProgress;
 
@@ -91,7 +92,7 @@ describe('Cygwin installer', function() {
 
   it('should download cygwin installer to temporary folder as ssh-rsync.zip', function() {
     expect(new CygwinInstall(installerDataSvc, 'cygwin', 'url', 'cygwin.exe', 'sha').downloadedFile).to.equal(
-      path.join('tempDirectory', 'cygwin.exe'));
+      path.join(installerDataSvc.localAppData(), 'cache', 'cygwin.exe'));
   });
 
   describe('installer download', function() {
@@ -116,7 +117,7 @@ describe('Cygwin installer', function() {
 
       expect(streamSpy).to.have.been.calledOnce;
       expect(spy).to.have.been.calledOnce;
-      expect(spy).to.have.been.calledWith(path.join('tempDirectory', 'cygwin.exe'));
+      expect(spy).to.have.been.calledWith(path.join(installerDataSvc.localAppData(), 'cache', 'cygwin.exe'));
     });
 
     it('should call a correct downloader request with the specified parameters once', function() {
@@ -170,6 +171,7 @@ describe('Cygwin installer', function() {
     it('should set progress to "Installing"', function() {
       sandbox.stub(Installer.prototype, 'exec').resolves(true);
       sandbox.stub(Installer.prototype, 'copyFile').resolves(true);
+      sandbox.stub(Util, 'writeFile').resolves(true);
       sandbox.stub(Platform, 'addToUserPath').resolves(true);
 
       return installer.installAfterRequirements(fakeProgress, success, failure).then(() => {
@@ -181,6 +183,7 @@ describe('Cygwin installer', function() {
     it('should run the cygwin.exe installer with correct parameters', function() {
       sandbox.stub(Installer.prototype, 'exec').resolves(true);
       sandbox.stub(Installer.prototype, 'copyFile').resolves(true);
+      sandbox.stub(Util, 'writeFile').resolves(true);
       sandbox.stub(Platform, 'addToUserPath').resolves(true);
 
       return installer.installAfterRequirements(fakeProgress, success, failure).then(()=>{
@@ -191,11 +194,11 @@ describe('Cygwin installer', function() {
     it('should run the cygwin.exe installer with local packages if they present', function() {
       sandbox.stub(Installer.prototype, 'exec').resolves(true);
       sandbox.stub(Installer.prototype, 'copyFile').resolves(true);
+      sandbox.stub(Util, 'writeFile').resolves(true);
       sandbox.stub(Platform, 'addToUserPath').resolves(true);
       sandbox.stub(fs, 'existsSync').returns(true);
       return installer.installAfterRequirements(fakeProgress, success, failure).then(()=>{
-        let localPackages = path.join(installer.bundleFolder, 'packages');
-        expect(Installer.prototype.exec).to.have.been.calledWithMatch(`-L -l ${localPackages}`);
+        expect(Installer.prototype.exec).to.have.been.calledWithMatch('powershell');
       });
     });
 
@@ -212,6 +215,7 @@ describe('Cygwin installer', function() {
       sandbox.stub(Installer.prototype, 'exec').resolves(true);
       sandbox.stub(Installer.prototype, 'execFile').resolves(true);
       sandbox.stub(Installer.prototype, 'copyFile').resolves(true);
+      sandbox.stub(Util, 'writeFile').resolves(true);
       sandbox.stub(Platform, 'addToUserPath').resolves(true);
       installer.installAfterRequirements(fakeProgress, function() {
         expect(Installer.prototype.copyFile).to.be.calledWith(

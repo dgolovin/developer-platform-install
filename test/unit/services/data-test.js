@@ -13,6 +13,7 @@ import os from 'os';
 import fs from 'fs';
 import fsExtra from 'fs-extra';
 import child_process from 'child_process';
+import TokenStore from 'browser/services/credentialManager';
 chai.use(sinonChai);
 
 
@@ -80,9 +81,9 @@ describe('InstallerDataService', function() {
     });
 
     it('should set default values correctly', function() {
-      expect(svc.tmpDir).to.equal(os.tmpdir());
+      expect(svc.tempDir()).to.equal(os.tmpdir());
 
-      expect(svc.username).to.equal('');
+      expect(svc.username).to.equal(TokenStore.getUserName());
       expect(svc.password).to.equal('');
 
       expect(svc.downloading).to.equal(false);
@@ -142,6 +143,7 @@ describe('InstallerDataService', function() {
 
       it('should copy uninstaller powershell script to target install folder', function() {
         svc.setup();
+        svc.setupTargetFolder();
         expect(svc.copyUninstaller).calledOnce;
       });
 
@@ -149,13 +151,15 @@ describe('InstallerDataService', function() {
         fxExtraStub.yields('error');
         Logger.error.reset();
         svc.setup();
+        svc.setupTargetFolder();
         expect(Logger.error).calledOnce;
       });
 
-      it('should log sucess message if copy operation succed', function() {
+      it('should log sucess message if copy operation succeeded', function() {
         fxExtraStub.yields();
         Logger.info.reset();
         svc.setup();
+        svc.setupTargetFolder();
         expect(Logger.info).calledTwice;
       });
 
@@ -172,6 +176,7 @@ describe('InstallerDataService', function() {
           resolve();
         });
         svc.setup();
+        svc.setupTargetFolder();
         return result.then(()=>{
           expect(child_process.exec).to.be.called;
           expect(Logger.info).calledThrice;
@@ -192,6 +197,7 @@ describe('InstallerDataService', function() {
           resolve();
         });
         svc.setup();
+        svc.setupTargetFolder();
         return result.then(()=>{
           expect(child_process.exec).to.be.called;
         });

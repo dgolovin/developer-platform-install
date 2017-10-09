@@ -7,7 +7,6 @@ import DevstudioAutoInstallGenerator from './devstudio-autoinstall';
 import InstallableItem from './installable-item';
 import Installer from './helpers/installer';
 import Logger from '../services/logger';
-import JdkInstall from './jdk-install';
 import Platform from '../services/platform';
 
 class DevstudioInstall extends InstallableItem {
@@ -28,6 +27,10 @@ class DevstudioInstall extends InstallableItem {
 
   installAfterRequirements(progress, success, failure) {
     progress.setStatus('Installing');
+    //this workaround for fuse tooling install problems
+    if(fs.existsSync(this.bundledFile)) {
+      this.downloadedFile = this.bundledFile;
+    }
     this.installGenerator = new DevstudioAutoInstallGenerator(this.installerDataSvc.devstudioDir(), this.installerDataSvc.jdkDir(), this.version, this.additionalLocations, this.additionalIus);
     let installer = new Installer(this.keyName, progress, success, failure);
     Logger.info(this.keyName + ' - Generate devstudio auto install file content');

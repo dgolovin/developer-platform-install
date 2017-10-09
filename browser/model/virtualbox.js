@@ -14,7 +14,7 @@ class VirtualBoxInstall extends InstallableItem {
   constructor(installerDataSvc, targetFolderName, downloadUrl, fileName, sha256sum, version, revision) {
     super(VirtualBoxInstall.KEY, downloadUrl, fileName, targetFolderName, installerDataSvc, false);
 
-    this.minimumVersion = version;
+    this.minimumVersion = '5.1.22';
     this.maximumVersion = '5.2.0';
     this.revision = revision;
 
@@ -53,6 +53,11 @@ class VirtualBoxInstall extends InstallableItem {
 
   isDisabled() {
     return this.hasOption('detected') || this.references > 0;
+  }
+
+  get hidden() {
+    let hv = this.installerDataSvc.getInstallable('hyperv');
+    return hv && hv.isDetected();
   }
 }
 
@@ -93,7 +98,6 @@ class VirtualBoxInstallWindows extends VirtualBoxInstall {
         delete this.option.detected;
       }
       this.addOption('install', this.version, path.join(this.installerDataSvc.installRoot, 'virtualbox'), true);
-      this.selectedOption = 'install';
       return Promise.resolve();
     }).then(()=>{
       return Platform.isVirtualizationEnabled();
@@ -114,8 +118,8 @@ class VirtualBoxInstallWindows extends VirtualBoxInstall {
 
   installAfterRequirements(progress, success, failure) {
     let installer = new Installer(this.keyName, progress, success, failure);
-    return installer.execFile(
-      this.downloadedFile, ['--extract', '-path', this.installerDataSvc.virtualBoxDir(), '--silent']
+    return installer.exec(
+      [`"${this.downloadedFile}"`, '--extract', '-path', `"${this.installerDataSvc.virtualBoxDir()}"`, '--silent'].join(' ')
     ).then(() => {
       return this.configure(installer);
     }).then(() => {
@@ -128,34 +132,23 @@ class VirtualBoxInstallWindows extends VirtualBoxInstall {
 
   configure(installer) {
     return new Promise((resolve, reject) => {
-      // If downloading is not finished wait for event
-      if (this.installerDataSvc.downloading) {
-        Logger.info(this.keyName + ' - Waiting for all downloads to complete');
-        installer.progress.setStatus('Waiting for all downloads to finish');
-        this.ipcRenderer.on('downloadingComplete', () => {
-          // time to start virtualbox installer
-          return this.installMsi(installer, resolve, reject);
-        });
-      } else { // it is safe to call virtualbox installer
-        //downloading is already over vbox install is safe to start
-        return this.installMsi(installer, resolve, reject);
-      }
+      return this.installMsi(installer, resolve, reject);
     });
   }
 
   installMsi(installer, resolve, reject) {
     installer.progress.setStatus('Installing');
     let msiFile = path.join(this.installerDataSvc.virtualBoxDir(), '/VirtualBox-' + this.version + '-r' + this.revision + '-MultiArch_amd64.msi');
-    return installer.execFile('msiexec', [
+    return installer.exec(['msiexec',
       '/i',
-      msiFile,
-      'INSTALLDIR=' + this.installerDataSvc.virtualBoxDir(),
+      `"${msiFile}"`,
+      `INSTALLDIR="${this.installerDataSvc.virtualBoxDir()}"`,
       'ADDLOCAL=VBoxApplication,VBoxNetwork,VBoxNetworkAdp',
       '/qn',
       '/norestart',
       '/Liwe',
-      path.join(this.installerDataSvc.installDir(), 'vbox.log')
-    ]).then((res) => {
+      `"${path.join(this.installerDataSvc.installDir(), 'vbox.log')}"`
+    ].join(' ')).then((res) => {
       // msiexec logs are in UCS-2
       Util.findText(path.join(this.installerDataSvc.installDir(), 'vbox.log'), 'CopyDir: DestDir=', 'ucs2').then((result)=>{
         let regexTargetDir = /CopyDir: DestDir=(.*),.*/;
@@ -212,7 +205,6 @@ class VirtualBoxInstallDarwin extends VirtualBoxInstall {
         delete this.option.detected;
       }
       this.addOption('install', this.version, '/usr/local/bin', true);
-      this.selectedOption = 'install';
       return Promise.resolve();
     }).then(() => {
       return Platform.isVirtualizationEnabled();
@@ -240,7 +232,7 @@ class VirtualBoxInstallDarwin extends VirtualBoxInstall {
     //let timestamp = new Date().toJSON().replace(/:/g,'')
     let volumeName = `virtualbox-${this.version}`;
     let shellScript = [
-      `hdiutil attach -mountpoint /Volumes/${volumeName}  ${dmgFile}`,
+      `hdiutil attach -mountpoint /Volumes/${volumeName}  '${dmgFile}'`,
       `installer -pkg /Volumes/${volumeName}/VirtualBox.pkg -target /`
     ].join(';');
     let osaScript = [

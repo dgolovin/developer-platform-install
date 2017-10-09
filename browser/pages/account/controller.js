@@ -1,6 +1,12 @@
 'use strict';
 
+import path from 'path';
+import fs from 'fs-extra';
+import mkdirp from 'mkdirp';
 import Util from '../../model/helpers/util';
+import Logger from '../../services/logger';
+import Platform from '../../services/platform';
+import TokenStore from '../../services/credentialManager';
 
 class AccountController {
 
@@ -13,15 +19,22 @@ class AccountController {
     this.installerDataSvc = installerDataSvc;
     this.electron = electron;
     $scope.version = electron.remote.app.getVersion();
-    this.username = '';
-    this.password = '';
     this.authFailed = false;
     this.tandcNotSigned = false;
     this.isLoginBtnClicked = false;
+    this.rememberMe = false;
     this.httpError = undefined;
+    this.password = '';
+    this.username = '';
+    $scope.$watch('$viewContentLoaded', ()=>{
+      this.password = this.installerDataSvc.password;
+      this.username = this.installerDataSvc.username;
+    });
   }
 
   login() {
+    this.isLoginBtnClicked = true;
+    this.resetLoginErrors();
     let req = {
       method: 'GET',
       url: 'https://developers.redhat.com/download-manager/rest/tc-accepted?downloadURL=/file/cdk-2.1.0.zip',
@@ -78,8 +91,16 @@ class AccountController {
     if (result.status == 200 && result.data == true) {
       this.installerDataSvc.setCredentials(this.username, this.password);
       this.isLoginBtnClicked = false;
-      this.router.go('location');
+      this.router.go('install');
       this.authFailed = false;
+      // Storing the password for next use
+      if (this.rememberMe == true) {
+        let dataFilePath = Platform.localAppData();
+        mkdirp.sync(dataFilePath);
+        let data = {'username': this.username};
+        fs.writeFileSync(path.join(dataFilePath, 'settings.json'), JSON.stringify(data));
+        TokenStore.setItem('login', this.username, this.password);
+      }
     } else if (result.status == 200 && result.data == false) {
       this.tandcNotSigned = true;
       this.isLoginBtnClicked = false;
@@ -103,6 +124,16 @@ class AccountController {
     this.timeout(()=>{
       this.scope.$apply();
     });
+  }
+
+  exit() {
+    Logger.info('Closing the installer window');
+    this.electron.remote.getCurrentWindow().close();
+  }
+
+  back() {
+    Logger.info('Going back a page');
+    this.router.go('confirm');
   }
 }
 

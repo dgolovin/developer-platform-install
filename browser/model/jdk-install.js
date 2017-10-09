@@ -54,13 +54,10 @@ class JdkInstall extends InstallableItem {
         if (version && version.length > 1) {
           this.addOption('detected', version[1], '', true);
           this.option['detected'].version = version[1];
-          this.selected = false;
           this.selectedOption = 'detected';
           this.validateVersion();
           if(this.option['detected'].valid) {
             this.selectedOption = 'detected';
-          } else if(Platform.OS !== 'darwin') {
-            this.selectedOption = 'install';
           }
           resolve(true);
         } else {
@@ -83,11 +80,6 @@ class JdkInstall extends InstallableItem {
       Logger.info(this.keyName + ' - ' + error);
       if(this.option.detected) {
         delete this.option.detected;
-      }
-      if(Platform.OS !== 'darwin' ) {
-        this.selectedOption = 'install';
-      } else {
-        this.selectedOption = 'detected';
       }
       return Promise.resolve();
     });
@@ -197,15 +189,15 @@ class JdkInstall extends InstallableItem {
   }
 
   isConfigured() {
-    if (Platform.OS === 'darwin') {
-      return this.isDetected() && this.option['detected'].valid;
+    if (Platform.getOS() === 'darwin') {
+      return this.isDetected() && this.option.detected && this.option.detected.valid;
     }
     return super.isConfigured();
   }
 
   isDisabled() {
     return !this.hasOption('detected') && (this.references > 0)
-    || this.hasOption('detected') && !this.option.detected.valid && (this.references > 0)
+    || this.hasOption('detected') && !this.option.detected.valid
     || this.hasOption('detected') && this.option.detected.valid && this.openJdkMsi
     || Platform.OS === 'darwin';
   }

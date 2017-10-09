@@ -1,5 +1,4 @@
-﻿
-$targetLocation = $args[0]
+﻿$targetLocation = $args[0]
 $timeStamp = $args[1]
 $versionString = $args[2]
 
@@ -9,6 +8,8 @@ $uninstallIcon = "$targetLocation\uninstaller\uninstall.ico"
 # sign all shell scripts and replace ByPass to AllSigned
 $uninstallString = "powershell -ExecutionPolicy ByPass -File $targetLocation\uninstaller\uninstall.ps1 $timeStamp"
 $installDate = Get-Date -Format yyyyMMdd
+
+Get-ChildItem $uninstallItem | where-object { ($_.PSChildName -like "DevelopmentSuite*" -and (Get-ItemProperty -Path $_.PSPath -Name InstallLocation).InstallLocation -like "$targetLocation") } | ForEach-Object {Remove-Item -Path $_.PSPath }
 
 New-Item -Path "$uninstallItem" -Name "DevelopmentSuite$timeStamp"
 New-ItemProperty -Path $devsuiteItem -Name DisplayName -Value "Red Hat Development Suite"
@@ -21,3 +22,4 @@ New-ItemProperty -Path $devsuiteItem -Name InstallDate -Value $installDate
 New-ItemProperty -Path $devsuiteItem -Name Publisher -Value "RedHat, Inc."
 New-ItemProperty -Path $devsuiteItem -Name UninstallString -Value $uninstallString
 New-ItemProperty -Path $devsuiteItem -Name DisplayIcon -Value $uninstallIcon
+[Environment]::Exit(0);

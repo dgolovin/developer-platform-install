@@ -2,15 +2,15 @@
 
 function describeBreadcrumbs(context) {
   describe('Breadcrumbs', function() {
-    let presence = context.pageName.toLowerCase() !== 'login';
-    let names = ['Target Folder', 'Confirmation', 'Download & Install', 'Get Started'];
+    let presence = context.pageName.toLowerCase() !== 'about';
+    let names = ['Target Folder', 'Selection', 'Confirmation', 'Account', 'Download & Install', 'Get Started'];
     let breadcrumbs;
 
     beforeAll(function() {
       breadcrumbs = element(By.className('breadcrumbs'));
     });
 
-    it('should appear on all but the login page', function() {
+    it('should appear on all but the initial page', function() {
       if (!presence) {
         expect(breadcrumbs.isPresent()).toBe(false);
       } else {
@@ -31,7 +31,7 @@ function describeBreadcrumbs(context) {
 
       it('should set the last page as final', function() {
         let lastItem = breadcrumbs.element(By.className('end'));
-        expect(lastItem.getText()).toEqual(names[3]);
+        expect(lastItem.getText()).toEqual(names[names.length -1]);
       });
 
       it('should activate the current entry', function() {

@@ -4,10 +4,35 @@ var angularProtractor = require('gulp-angular-protractor'),
   path = require('path'),
   globby = require('globby');
 
+var open = require('gulp-open');
 var yargs = require('yargs');
 var buildFolder = path.join('dist', process.platform + '-' + process.arch);
 
 module.exports = function(gulp) {
+
+  gulp.task('unit-test-1by1', function() {
+    return globby('test/unit/**/*.js', {root: '.'}).then(function(files) {
+      files.reduce((promises, file) => {
+        return promises.then(function() {
+          return new Promise(function(resolve) {
+            gulp.src([file], {
+              read: false
+            }).pipe(mocha({
+              recursive: false,
+              compilers: 'js:babel-core/register',
+              env: {
+                NODE_PATH: '.'
+              },
+              grep: yargs.argv.grep,
+              g: yargs.argv.g,
+              reporter: yargs.argv.reporter
+            })).on('end', resolve);
+          });
+        });
+      }, Promise.resolve());
+    });
+  });
+
   gulp.task('unit-test', function() {
     return gulp.src([yargs.argv['spec-file'] || 'test/unit/**/*.js'], {
       read: false
@@ -23,7 +48,11 @@ module.exports = function(gulp) {
       istanbul: {
         report: yargs.argv.report || 'lcov'
       }
-    }));
+    })).on('end', function() {
+      if(yargs.argv['open-report']) {
+        gulp.src(path.join('coverage', 'lcov-report', 'index.html')).pipe(open());
+      }
+    });
   });
 
   gulp.task('webdriver-update', function(cb) {
@@ -37,12 +66,13 @@ module.exports = function(gulp) {
   });
 
   gulp.task('protractor-run', ['webdriver-update'], function(cb) {
-    yargs.string(['virtualbox', 'hyperv', 'cygwin', 'jdk', 'targetFolder']);
-    assignArgument('virtualbox', 'PDKI_TEST_INSTALLED_VBOX');
+    yargs.string(['virtualbox', 'hyperv', 'cygwin', 'jdk', 'targetFolder', 'additionalItems']);
+    assignArgument('virtualbox', 'PDKI_TEST_INSTALLED_VIRTUALBOX');
     assignArgument('hyperv', 'PDKI_TEST_INSTALLED_HYPERV');
     assignArgument('cygwin', 'PDKI_TEST_INSTALLED_CYGWIN');
     assignArgument('jdk', 'PDKI_TEST_INSTALLED_JDK');
     assignArgument('targetFolder', 'PDKI_TEST_TARGET_FOLDER');
+    assignArgument('additionalItems', 'PDKI_TEST_ADDITIONAL_ITEMS');
 
     gulp.src(['../test/ui/**/*.js'])
       .pipe(angularProtractor({

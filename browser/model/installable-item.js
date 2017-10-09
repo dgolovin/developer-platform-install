@@ -5,7 +5,8 @@ import Logger from '../services/logger';
 import path from 'path';
 import fs from 'fs-extra';
 import Downloader from './helpers/downloader';
-let remote = require('electron').remote;
+import {remote} from 'electron';
+import mkdirp from 'mkdirp';
 
 let ipcRenderer = require('electron').ipcRenderer;
 
@@ -17,6 +18,7 @@ class InstallableItem {
     this.productName = requirement.name;
     this.productVersion = requirement.version;
     this.productDesc = requirement.description;
+    this.isInstallable = requirement.installable;
     this.targetFolderName = targetFolderName;
     this.installerDataSvc = installerDataSvc;
     this.existingInstall = false;
@@ -25,8 +27,8 @@ class InstallableItem {
     this.useDownload = true;
     this.downloaded = false;
     this.installed = false;
-
-    this.selected = true;
+    this.size = requirement.size;
+    this.installSize = requirement.installSize;
     this.version = requirement.version;
 
     this.detected = false;
@@ -44,15 +46,33 @@ class InstallableItem {
 
     this.isCollapsed = true;
     this.option = new Set();
-    this.selectedOption = 'install';
+    this.selectedOption = requirement.defaultOption ? requirement.defaultOption : 'install';
 
     this.downloader = null;
-    this.downloadFolder = this.installerDataSvc.tempDir();
-    this.downloadedFile = path.join(this.installerDataSvc.tempDir(), fileName);
+    this.downloadFolder = path.join(this.installerDataSvc.localAppData(), 'cache');
+    mkdirp.sync(this.downloadFolder);
+    this.downloadedFile = path.join(this.downloadFolder, fileName);
+
+    if(fs.existsSync(this.bundledFile)) {
+      this.downloaded = true;
+    } else {
+      if(fs.existsSync(this.downloadedFile)) {
+        try {
+          let stat = fs.statSync(this.downloadedFile);
+          this.downloaded = stat && (stat.size == requirement.size);
+        } catch (error) {
+          Logger.info(`${this.keyName} - fstat function failure ${error}`);
+        }
+      }
+    }
+
     this.installAfter = undefined;
     this.ipcRenderer = ipcRenderer;
     this.authRequired = authRequired;
     this.references = 0;
+
+    this.messages = requirement.messages;
+    this.totalDownloads = 1;
   }
 
   getProductName() {
@@ -110,8 +130,8 @@ class InstallableItem {
     //to be overriden
   }
 
-  downloadInstaller(progress, success, failure) {
-    this.downloader = new Downloader(progress, success, failure);
+  downloadInstaller(progress, success, failure, downloader) {
+    this.downloader = downloader ? downloader : new Downloader(progress, success, failure, this.totalDownloads);
     if(fs.existsSync(this.bundledFile)) {
       this.downloadedFile = this.bundledFile;
       this.downloader.closeHandler();
@@ -161,12 +181,18 @@ class InstallableItem {
 
   install(progress, success, failure) {
     if( !this.getInstallAfter() || this.getInstallAfter().isInstalled() ) {
+      progress.productName = this.productName;
+      progress.productVersion = this.productVersion;
+      progress.$timeout();
       this.installAfterRequirements(progress, success, failure);
     } else {
       let name = this.getInstallAfter().productName;
       progress.setStatus(`Waiting for ${name} to finish installation`);
       this.ipcRenderer.on('installComplete', (event, arg) => {
         if (!this.isInstalled() && arg === this.getInstallAfter().keyName) {
+          progress.productName = this.productName;
+          progress.productVersion = this.productVersion;
+          progress.$timeout();
           this.installAfterRequirements(progress, success, failure);
         }
       });

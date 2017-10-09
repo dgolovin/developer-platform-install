@@ -1,7 +1,7 @@
 'use strict';
 
 let webdriver = browser.driver;
-let context = { pageName: 'Login' };
+let context = { pageName: 'Account' };
 let ACCOUNT_URL = '/account';
 let PAGE_TITLE = 'Red Hat Development Suite';
 let BAD_USERNAME = 'badusername1';
@@ -13,16 +13,19 @@ describe('Login page', function() {
   let usernameField, passwordField, loginButton;
 
   beforeAll(function() {
+    browser.setLocation('account');
     webdriver.wait(protractor.until.elementLocated(By.id('loginButton')), 20000)
-    .then(function(elm) {
-      loginButton = elm;
-      usernameField = element(By.id('username'));
-      passwordField = element(By.id('password'));
-    });
+      .then(function(elm) {
+        loginButton = elm;
+        usernameField = element(By.id('username'));
+        passwordField = element(By.id('password'));
+      });
   });
 
   it('Inital page URL should be correct', function() {
-    expect(browser.getLocationAbsUrl()).toEqual(ACCOUNT_URL);
+    return browser.getCurrentUrl().then((url)=>{
+      expect(url).toContain(ACCOUNT_URL);
+    });
   });
 
   it('Initial page title should match', function() {
@@ -66,16 +69,6 @@ describe('Login page', function() {
       expect(passwordStatus.isDisplayed()).toBe(false);
     });
 
-    it('Leaving empty username field should display an error', function() {
-      passwordField.sendKeys('');
-      expect(usernameStatus.isDisplayed()).toBe(true);
-    });
-
-    it('Leaving empty password field should display an error', function() {
-      usernameField.sendKeys('');
-      expect(usernameStatus.isDisplayed()).toBe(true);
-    });
-
     it('Entering a username should hide the appropriate error', function() {
       usernameField.sendKeys('user');
       expect(usernameStatus.isDisplayed()).toBe(false);
@@ -86,6 +79,16 @@ describe('Login page', function() {
       passwordField.sendKeys('password');
       expect(passwordStatus.isDisplayed()).toBe(false);
       passwordField.clear();
+    });
+
+    it('Leaving empty username field should display an error', function() {
+      usernameField.sendKeys('');
+      expect(usernameStatus.isDisplayed()).toBe(true);
+    });
+
+    it('Leaving empty password field should display an error', function() {
+      passwordField.sendKeys('');
+      expect(passwordStatus.isDisplayed()).toBe(true);
     });
 
     it('Login button should be enabled after user enters name and password', function() {

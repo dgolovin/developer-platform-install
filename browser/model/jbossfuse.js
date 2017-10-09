@@ -10,7 +10,6 @@ import Downloader from './helpers/downloader';
 import InstallableItem from './installable-item';
 import Installer from './helpers/installer';
 import Logger from '../services/logger';
-import JdkInstall from './jdk-install';
 
 class FusePlatformInstall extends InstallableItem {
   constructor(installerDataSvc, targetFolderName, file) {
@@ -21,15 +20,15 @@ class FusePlatformInstall extends InstallableItem {
     this.jbeap.bundledFile = path.join(this.bundleFolder, this.jbeap.fileName);
     this.jbeap.downloadedFile = path.join(this.downloadFolder, this.jbeap.fileName);
     this.installConfigFile = path.join(this.installerDataSvc.tempDir(), 'jbosseap640-autoinstall.xml');
+    this.totalDownloads = 2;
   }
 
   static get KEY() {
     return 'fuseplatform';
   }
 
-  downloadInstaller(progress, success, failure) {
-    let totalDownloads = 2;
-    this.downloader = new Downloader(progress, success, failure, totalDownloads);
+  downloadInstaller(progress, success, failure, downloader) {
+    this.downloader = downloader ? downloader : new Downloader(progress, success, failure, this.totalDownloads);
     let username = this.installerDataSvc.getUsername(),
       password = this.installerDataSvc.getPassword();
 
@@ -124,6 +123,13 @@ class FusePlatformInstall extends InstallableItem {
 
   get javaPath() {
     return path.join(this.installerDataSvc.jdkDir(), 'bin', 'java');
+  }
+
+  isConfigurationValid() {
+    let jdk = this.installerDataSvc.getInstallable('jdk');
+    return jdk.isConfigured()
+      && this.isConfigured()
+      || this.isSkipped();
   }
 }
 

@@ -93,13 +93,13 @@ for On-line and Bundle Installers.
 in bash terminal
 
         touch ~/.bash_profile
-        curl -o- https://raw.githubusercontent.com/creationix/nvm/v0.32.1/install.sh | bash
+        curl -o- https://raw.githubusercontent.com/creationix/nvm/v0.33.2/install.sh | bash
 
    then restart bash to pick up changes in your environment
 
 4. Install nodejs using nvm command
 
-        nvm install 3.6.1
+        nvm install v6.11.2
 
 5. Clone installer repository
 
@@ -226,6 +226,15 @@ and raw coverage reports. The report format can be overridden with `--report`
 parameter like shown below
 
     npm test -- --report cobertura
+    
+To open html coverage report in your default browser after unit tests finished use 
+`--open-report` option
+
+    npm test -- --spec-file=test/unit/pages/**/*.js --open-report
+
+Running unit tests one by one for each installer module
+
+    gulp unit-test-1by1
 
 Debugging unit tests
 --------------------
@@ -274,20 +283,14 @@ For CI environment a powershell script is available in 'test/system/windows/runT
 This script launches the tests with elevated privileges and copy the
 installation logs into the $devsuiteFolder for archivation in CI environment.
 
-Debugging
----------
+Debugging in Chrome Developer Tools
+-----------------------------------
 
-Enable Chrome Developer tools in installer window
-
-    export PDKI_DEBUG=1
-    npm start
-
-or you can run installer with
+Run installer with
 
     npm start
 
-and then push Ctrl + Shift + I to show Chrome Developer Tools in current
-installer window
+and then push Ctrl + Shift + I to show Chrome Developer Tools in current installer window
 
 Testing online installer
 ------------------------

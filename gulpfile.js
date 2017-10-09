@@ -38,7 +38,7 @@ gulp.task('transpile:app', function() {
 
   var resources = gulp.src(['browser/**/*', '!browser/**/*.js', 'package.json',
     'uninstaller/*', 'requirements.json'], {base: '.'}
-	).pipe(gulp.dest('transpiled'));
+  ).pipe(gulp.dest('transpiled'));
 
   return merge(sources, resources);
 });
@@ -49,6 +49,11 @@ gulp.task('create-modules-link', function() {
     .pipe(symlink('transpiled/node_modules', {
       force: true
     }));
+});
+
+gulp.task('electron-rebuild', function(cb) {
+  var electronrebuild = path.join('node_modules', '.bin', 'electron-rebuild');
+  exec(electronrebuild, common.createExecCallback(cb, true));
 });
 
 // clean dist/ AND prefetch-dependencies/ folder
@@ -76,7 +81,7 @@ gulp.task('create-dist-dir', function(cb) {
   return mkdirp(config.buildFolderPath, cb);
 });
 
-gulp.task('generate', ['create-modules-link', 'update-requirements'], function(cb) {
+gulp.task('generate', ['create-modules-link', 'update-requirements', 'electron-rebuild'], function(cb) {
   var electronVersion = pjson.devDependencies['electron'];
   var cmd = path.join('node_modules', '.bin') + path.sep + 'electron-packager transpiled ' + config.artifactName + ' --platform=' + config.artifactPlatform + ' --arch=' + config.artifactArch;
   cmd += ' --version=' + electronVersion + ' --out="' + config.buildFolderPath + '" --overwrite --asar.unpack=**/browser/**/*.ps1 --asar.unpackDir="browser/model/helpers/win32/*"';
@@ -94,7 +99,7 @@ gulp.task('generate', ['create-modules-link', 'update-requirements'], function(c
 // default task
 gulp.task('default', ['run']);
 
-gulp.task('run', ['update-requirements', 'create-modules-link'], function(cb) {
+gulp.task('run', ['update-requirements', 'create-modules-link', 'electron-rebuild'], function(cb) {
   exec(path.join('node_modules', '.bin') + path.sep + 'electron transpiled', common.createExecCallback(cb));
 });
 
@@ -102,7 +107,14 @@ gulp.task('update-requirements', ['transpile:app'], function() {
 
   let updateDevStudioVersion = ()=>{
     return new Promise((resolve, reject) => {
-      let url = reqs['devstudio'].url + '/content.json';
+      let url;
+      if(reqs['devstudio'].url.endsWith('/')) {
+        url = reqs['devstudio'].url + '/content.json';
+      } else {
+        url = reqs['devstudio'].url.substring(0, reqs['devstudio'].url.lastIndexOf('/')) + '/content.json';
+      }
+
+      console.log(url);
       request(url, (err, response, body)=>{
         if (err) {
           reject(err);
